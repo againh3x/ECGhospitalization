@@ -81,6 +81,62 @@ long_df = long_df.sort_values(["stay_id", "source"])
 long_df['source'] = long_df['source'] + 1
 long_df.to_csv(out_csv, index=False)
 print(f"\n✓ Wrote {out_csv}")
+import pandas as pd
+df = pd.read_csv("vitals_long.csv")
+# assume df is your DataFrame
+col = "pain"
+import re
+
+df[col] = df[col].astype(str).str.strip().str.lower()
+
+# ---------------------------------------------------------------------------
+# 1.  flag “sleep” and “unable/uta/ua”  ➜   indicator columns + set pain = -1
+# ---------------------------------------------------------------------------
+sleep_mask = df[col].str.contains(r"sleep",             na=False)
+uta_mask   = df[col].str.contains(r"\b(?:unable|uta|ua)\b", na=False)
+
+df["sleeping"] = sleep_mask.astype(int)
+df["uta"]      = uta_mask.astype(int)
+
+df.loc[sleep_mask | uta_mask, col] = -1                 # force value –1
+
+
+  # 4-6, 2 - 5 …
+
+slash_pat = re.compile(r"\s*(\d*\.?\d+|\.\d+)\s*/\s*10\s*$")        # 3/10, .4/10 …
+dash_pat  = re.compile(r"\s*(\d+)\s*-\s*(\d+)\s*$")               
+
+df["pain"] = df["pain"].apply(
+    lambda v: (
+        (lambda m: (int(m.group(1)) + int(m.group(2))) / 2)(dash_pat.fullmatch(str(v)))
+        if dash_pat.fullmatch(str(v))
+        else (lambda m: float(m.group(1)))(slash_pat.fullmatch(str(v)))
+        if slash_pat.fullmatch(str(v))
+        else v                         # leave unchanged if neither pattern matches
+    )
+)
+
+leftover_mask = pd.to_numeric(df[col], errors="coerce").isna()   # still text or blank
+df.loc[leftover_mask, col] = -1
+
+df["real_pain"] = (df[col] != -1).astype(int)
+is_non_numeric_str = (
+    pd.to_numeric(df[col], errors="coerce").isna()   # couldn’t convert to number
+    & df[col].notna()                                # and isn’t actual NaN
+)
+
+# 2️⃣ Get counts
+vc = df.loc[is_non_numeric_str, col].value_counts(dropna=False)
+
+
+# 3️⃣ Pretty-print
+for val, n in vc.items():
+    print(f"{repr(val):<30} → {n} rows")
+
+
+display(df.head(50))
+print(len(df))
+df.to_csv('vitals_long.csv', index=False)
 
 #!/usr/bin/env python
 # clean_vitals.py
