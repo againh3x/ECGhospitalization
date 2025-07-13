@@ -19,3 +19,12 @@ vitals.py - Inputs final_ecgs.csv and creates a new csv labeled 'vitals_long_cle
 
 
 Pretraining (inputs: MIMIC-IV raw csvs; output: 'pretrained_model.pth')
+
+Preprocessing.py - The main preprocessing scripit for pretraining. Takes in all raw MIMIC-IV raw files and outputs 'pretraining_ecgs.csv' to be used for training
+
+Pretrain.py - Script for training the ResNet. Takes in pretraining_ecgs.csv and outputs 'pretrained_model.pth' (model weights). 
+
+Pretrained_model.py - Pretrained model skeleton for reference or import. 
+
+pretrained_model.pth - Saved pretrained ResNet-18 weights to be transferred to disposition task.
+
