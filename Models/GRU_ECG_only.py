@@ -1,13 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Train ED‑LoS (>6 h) predictor from *only* sequential ECGs.
-Three architectures are supported:
-    1. GRU            ("gru") – similar to previous script but vitals/scalars removed
-    2. Transformer    ("transformer") – 2‑layer encoder with learnable positional enc.
-    3. Temporal CNN   ("tcn") – dilated 1‑D convolutions (Bai et al., 2018).
-
-For each architecture the script trains two data regimes
+The script trains two data regimes
     • ALL stays     (≥1 ECG)  –   name="All stays"
     • MULTI stays   (≥2 ECGs) –   name="MULTI stays"
 …then plots AUROC and AUPRC curves comparing the two regimes.
@@ -16,19 +10,6 @@ are logged in folders structured as:
     outputs/<arch>/{all_performance|multi_performance}/
 Plus combined plots in    outputs/<arch>/combined_performance/
 
-Usage
------
-$ python train_ecg_only_models.py gru
-$ python train_ecg_only_models.py transformer
-$ python train_ecg_only_models.py tcn
-(or omit arg to train all three sequentially)
-
-Suggested tweaks
-----------------
-• For Transformer increase ECG_EMB_DIM to 512 (done below) and set nhead so
-  that ECG_EMB_DIM % nhead == 0.
-• TCN receptive‑field scales with N_LAYERS & DILATIONS; adjust if ECG count » 6.
-• Consider a cosine LR scheduler if you extend training >20 epochs.
 """
 # ───────────────────────── Imports ──────────────────────────
 import os, random, warnings, sys
@@ -59,7 +40,7 @@ MAX_ECG_SEQ      = 6      # keep last N ECGs
 ECG_SEQ_LEN      = 5_000  # samples per lead
 ECG_EMB_DIM      = 512  # output of ResNet18+adapter
 SEQ_FEAT_DIM  = ECG_EMB_DIM + 1 
-HIDDEN           = 256    # GRU hidden & Transformer model dim
+HIDDEN           = 256    
 BATCH_SIZE       = 32
 EPOCHS           = 20
 POS_WEIGHT       = 1.0
@@ -259,19 +240,6 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         return x + self.pe[:, :x.size(1)]
 
-class TransformerHead(nn.Module):
-    def __init__(self, nhead=8, nlayers=2):
-        super().__init__()
-        self.pos = PositionalEncoding(SEQ_FEAT_DIM)
-        enc_layer = nn.TransformerEncoderLayer(SEQ_FEAT_DIM, nhead, dim_feedforward=SEQ_FEAT_DIM*4, dropout=0.1, batch_first=True)
-        self.enc = nn.TransformerEncoder(enc_layer, nlayers)
-        self.out = nn.Linear(SEQ_FEAT_DIM, 1)
-    def forward(self, x, lens):
-        mask = torch.arange(x.size(1), device=x.device)[None,:] >= lens[:,None]
-        h = self.enc(self.pos(x), src_key_padding_mask=mask)
-        h = h.gather(1, (lens-1).view(-1,1,1).expand(-1,1,h.size(2))).squeeze(1)  # last valid token
-        return self.out(h).squeeze(1)
-
 class Chomp1d(nn.Module):
     def __init__(self, chomp):
         super().__init__(); self.chomp = chomp
@@ -289,27 +257,9 @@ class TemporalBlock(nn.Module):
         self.down = nn.Conv1d(in_ch, out_ch, 1) if in_ch!=out_ch else nn.Identity()
     def forward(self, x):
         return torch.relu(self.net(x) + self.down(x))
-class TCNHead(nn.Module):
-    def __init__(self, levels=(HIDDEN, HIDDEN)):
-        super().__init__()
-        layers = []
-        in_ch = SEQ_FEAT_DIM
-        for i,out_ch in enumerate(levels):
-            layers.append(TemporalBlock(in_ch, out_ch, k=3, d=2**i, drop=0.1))
-            in_ch = out_ch
-        self.tcn = nn.Sequential(*layers)
-        self.out = nn.Linear(in_ch, 1)
-    def forward(self, x, lens):
-        # x: (B,T,EMB) → (B,EMB,T)
-        y = self.tcn(x.transpose(1,2))              # (B,C,T)
-        idx = (lens-1).view(-1,1,1).expand(-1, y.size(1), 1)
-        last = y.gather(2, idx).squeeze(2)          # (B,C)
-        return self.out(last).squeeze(1)
 
 HEADS = {
     "gru": GRUHead,
-    "transformer": TransformerHead,
-    "tcn": TCNHead,
 }
 
 # ─────────────── Train / eval helpers ────────────────────────
