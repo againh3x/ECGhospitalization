@@ -7,11 +7,7 @@ Adds **four columns per lab group** to final_ecgs:
     <label>_peak      = max numeric result in that window
     <label>_abn       = 1 ⇢ any row’s labevents.flag == "abnormal"
     <label>_missing   = 1 ⇢ no row at all for that label (else 0)
-
-Rows where a test was drawn but both value fields are blank are
-treated as “below detection” → numeric 0, missing = 0.
-The script overwrites/creates **final_ecgs_with_labs.csv**
-with exactly the same row count as final_ecgs.csv.
+    
 """
 
 import pandas as pd
