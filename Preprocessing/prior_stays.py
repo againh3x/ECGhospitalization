@@ -1,8 +1,10 @@
-final_ecgs = pd.read_csv("final_ecgs.csv",               # or use the DF already in memory
+''' Adds prior stay information (disposition and number of stays) to the final csv'''
+
+final_ecgs = pd.read_csv("final_ecgs.csv",           
                          parse_dates=["ecg_time"])
 
-edstays = pd.read_csv("edstays.csv.gz",                     # the file you’ll upload
-                      parse_dates=["intime", "outtime"]) # cols typically present
+edstays = pd.read_csv("edstays.csv.gz",         
+                      parse_dates=["intime", "outtime"])
 
 fix_lookup = edstays.set_index("stay_id")["intime"]
 
