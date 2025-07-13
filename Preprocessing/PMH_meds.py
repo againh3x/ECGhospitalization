@@ -1,10 +1,5 @@
 """
-OPTION A  ─  Chronic‐medication flags from prescriptions.csv
-------------------------------------------------------------
-
-Window   : 365 days BEFORE each ED stay’s `intime`
-Features : one-hot flags (ETC-level-2, prefixed hxETC2_)  +  n_chronic_meds scalar
-Leakage  : none  (all rows strictly before ED arrival)
+Adds all previous medications prescribed in the past year as ETC code bins 
 """
 
 import pandas as pd
