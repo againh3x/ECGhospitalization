@@ -32,9 +32,21 @@ Models
 
 All_features_ROCPRC_data.npz - combined ROC and PRC data stored for models trained on all features (used to generate graphs)
 
-GRU_ECG_only.py - 
+GRU_ECG_only.py – End-to-end trainer for the **ECG-only** admission model.  
+• Inputs: `final_ecgs.csv`, raw waveform files in `..\ecg\`, and the pretrained ResNet weights `pretrained_model.pth`.  
+• What it does:  
+  – Encodes up to six 12-lead ECGs per stay with the unfrozen ResNet-18 + linear adapter.  
+  – Appends a time-delta channel, feeds the sequence to a single-layer GRU head, and optimizes BCE with class weighting.  
+  – Trains two regimes (“All stays” ≥1 ECG; “MULTI stays” ≥2 ECGs), applies early stopping, and logs loss curves, AUROC/AUPRC, confusion matrices, and per-epoch metrics.  
+• Outputs (in `outputs/gru/…`): best-epoch model checkpoints (`*_best.pth`), `*_roc_prc.npz` for plotting, loss-curve PNGs, and CSVs with epoch-level metrics & confusion matrices.
 
-GRU_all_features.py - 
+GRU_all_features.py – Trainer for the **multimodal** model that fuses ECGs, vitals, and scalar features.  
+• Inputs: `final_ecgs.csv`, `vitals_long_cleaned.csv`, waveform files, and `pretrained_model.pth`.  
+• What it does:  
+  – Generates ECG embeddings exactly as above, **plus** embeds up to ten rows of sequential vitals and 353 z-scored / boolean scalar features.  
+  – Summarizes ECG and vital sequences with separate GRUs, concatenates both hidden states with the scalar vector, and passes through a dropout-FC head.  
+  – Trains “All stays” and “MULTI stays” variants, handles imputation and z-scaling on the fly, performs class-weighted BCE training with early stopping, and records full performance diagnostics.  
+• Outputs (in `all_performance/`, `multi_performance/`, and `combined_performance/`): best-epoch `*_best_model.pth`, `*_roc_prc_data.npz`, loss and ROC/PRC figures, epoch-metric CSVs, and confusion-matrix summaries.
 
 all_stays_ECGonly.pth - Saved model weights for ECG-only features trained on full cohort (AUROC 0.845 AUPRC 0.863)
 all_stays_ECGonly_ROCPRC.npz - Corresponding ROC and PRC data for all_stays_ECGonly.pth
