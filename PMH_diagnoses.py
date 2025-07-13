@@ -81,3 +81,5 @@ df = (df.merge(pmh, on="subject_id", how="left")
 
 print("Added PMH columns:", len([c for c in df.columns if c.startswith("pmh_")]))
 print("Stays with ≥1 PMH bin:", (df["n_pmh_bins"]>0).mean()*100, "%")
+
+df.to_csv('final_ecgs.csv', index = False)
