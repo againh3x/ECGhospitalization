@@ -333,3 +333,41 @@ print(result.head())
 
 
 result.to_csv('sequential_ecgs.csv', index=False)
+
+
+
+df = pd.read_csv('sequential_ecgs.csv')
+print(df['subject_id'].nunique())
+df_sorted = (
+    df.sort_values(["subject_id", "n_ecg", "ecg_time"],
+                   ascending=[True,       False,   False])
+)
+
+# ─────────────────────────────────────────────────────────────
+# 2.  Drop the extra stays, keeping the first row per subject_id
+# ─────────────────────────────────────────────────────────────
+df_one_stay = df_sorted.drop_duplicates(subset="subject_id", keep="first")
+
+# df_one_stay now has exactly one row per patient
+print(f"Rows before: {len(df):,}  →  after: {len(df_one_stay):,}")
+df_one_stay.to_csv('final_ecgs.csv', index = False)
+
+# ── load the ECG-level table ────────────────────────────────────────────────
+ecg_df = pd.read_csv("final_ecgs.csv", low_memory=False)
+
+# ▸ disposition columns present in the CSV
+disp_cols = [c for c in ecg_df.columns if c.startswith("disposition_")]
+
+# ▸ keep rows with HOME or ADMIT *only*
+mask_other = (ecg_df[disp_cols]
+              .drop(columns=["disposition_HOME", "disposition_ADMITTED"],
+                    errors="ignore") == 1).any(axis=1)
+
+n_drop = mask_other.sum()
+print(f"Dropping {n_drop} stays with non-HOME/ADMIT disposition …")
+
+# ▸ filter & save
+ecg_df_filtered = ecg_df.loc[~mask_other].reset_index(drop=True)
+print(len(ecg_df_filtered))
+
+ecg_df_filtered.to_csv("final_ecgs.csv", index=False)
