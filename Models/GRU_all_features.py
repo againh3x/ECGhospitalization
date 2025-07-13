@@ -1,19 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Train ED-LoS (> 6 h) predictor from sequential ECGs + sequential vitals
-(+ per-stay scalar / boolean features).
+Train ED-disposition predictor from sequential ECGs + sequential vitals + static variables
 
 Files
 -----
-sequential_ecgs.csv   one row per stay  (paths/times of up-to-6 ECGs + scalar cols)
-vitals_long.csv       long format, one row per vital measurement
+final_ecgs.csv   one row per stay  (paths/times of up-to-6 ECGs + scalar cols)
+vitals_long_cleaned.csv       long format, one row per vital measurement
                       [stay_id, source, charttime,
                        temperature, heartrate, resprate, o2sat, sbp, dbp,
                        pain, sleeping, uta, real_pain …]
 pretrained_model.pth  1-D ResNet-18 weights (12-lead ECG)
 
-2025-06-13
 """
 # ────────────────────────────────────────────────────────────────────────────
 # Imports
@@ -98,7 +96,7 @@ BOOL_SCALARS = [
 
 
 ]
-                       # add your own extra booleans here
+                     
 RECORD_LIST_CSV = "record_list.csv"          # path, ecg_time
 rec_df   = pd.read_csv(RECORD_LIST_CSV, parse_dates=["ecg_time"])
 PATH2TIME = dict(zip(rec_df["path"], rec_df["ecg_time"]))
@@ -118,13 +116,8 @@ warnings.filterwarnings(
     category=UserWarning,
     module=r".*neurokit2\.ecg\.ecg_clean.*"
 )
-# ── inspect a single, fully-pre-processed example ───────────────────────────
+
 import json, pickle, pathlib
-
-
-# --------------------------------------------------------------------------
-# example usage – after you’ve built tr_ds / va_ds
-  # set save=False if you only want a printout
 
 # ────────────────────────────────────────────────────────────────────────────
 # ECG loader  →  (12, ECG_SEQ_LEN) float32
@@ -159,7 +152,7 @@ def load_ecg(path: str) -> torch.Tensor:
     return torch.tensor(cleaned, dtype=torch.float32)
 
 # ────────────────────────────────────────────────────────────────────────────
-# 1-D ResNet-18 backbone  (unchanged from previous scripts)
+# 1-D ResNet-18 backbone  
 # ────────────────────────────────────────────────────────────────────────────
 class BasicBlock1D(nn.Module):
     expansion = 1
@@ -346,7 +339,7 @@ class StaySeqDS(Dataset):
 
         # 3) stitch back together in the same order
         vals = np.concatenate(
-        [dt_hours,                  # ⬅ insert FIRST (or wherever you like)
+        [dt_hours,                  # insert FIRST 
          num_imp, pain_z, cat_raw],
         axis=1
     )      # (L, 9)
@@ -616,7 +609,7 @@ def train_variant(name="MULTI stays", keep_multi=True):
     pr, rc, f1, _ = precision_recall_fscore_support(
         yt, pred, average="binary", zero_division=0)
 
-    # history CSV: keep all epochs *plus* flag the best one
+    # history CSV
     metrics_df = pd.DataFrame(history)
     metrics_df["is_best"] = metrics_df["epoch"] == best_row["epoch"]
     metrics_df.to_csv(perf_dir / f"{stem}_metrics.csv", index=False)
@@ -628,7 +621,7 @@ def train_variant(name="MULTI stays", keep_multi=True):
         "val_ap":  best_snapshot["val_ap"]              # ★ best epoch
     }]).to_csv(perf_dir / f"{stem}_confusion.csv", index=False)
 
-    # 3) loss-curve plot  (unchanged: still every epoch)  ──────────────
+    # 3) loss-curve plot  ──────────────
     plt.figure(figsize=(5, 3))
     epochs = [h["epoch"] for h in history]
     plt.plot(epochs, [h["train_loss"] for h in history], label="train")
