@@ -371,3 +371,22 @@ ecg_df_filtered = ecg_df.loc[~mask_other].reset_index(drop=True)
 print(len(ecg_df_filtered))
 
 ecg_df_filtered.to_csv("final_ecgs.csv", index=False)
+
+
+
+ecg_path = "final_ecgs.csv"          # adjust if your file lives elsewhere
+keep = {"disposition_HOME", "disposition_ADMITTED"}   # columns to retain
+
+df = pd.read_csv(ecg_path, low_memory=False)
+
+# Identify all disposition_* columns, then subtract the ones we want to keep
+disp_cols = [c for c in df.columns if c.startswith("disposition_")]
+to_drop   = [c for c in disp_cols if c not in keep]
+
+print(f"Dropping {len(to_drop)} unwanted disposition columns:")
+print("  ", ", ".join(to_drop))
+
+df = df.drop(columns=to_drop)
+df.to_csv(ecg_path, index=False)     # overwrite (or change path to keep both)
+
+print("✓ final_ecgs.csv updated – only disposition_HOME and disposition_ADMIT kept.")
