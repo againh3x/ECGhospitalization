@@ -37,9 +37,11 @@ GRU_ECG_only.py -
 GRU_all_features.py - 
 
 all_stays_ECGonly.pth - Saved model weights for ECG-only features trained on full cohort (AUROC 0.845 AUPRC 0.863)
-
 all_stays_ECGonly_ROCPRC.npz - Corresponding ROC and PRC data for all_stays_ECGonly.pth
 
 all_stays_model.pth - Saved model weights for all features trained on full cohort (AUROC 0.913 AUPRC 0.932)
 
-multi_stays_ECGonly.pth - Saved model weights for ECG-only features trained on subset ≥2 ECG cohort (AUROC 0.878 AUPRC 0.915)
+multi_stays_ECGonly.pth - Saved model weights for ECG-only features trained on subset ≥2 ECG cohort (AUROC 0.878 AUPRC 0.918)
+all_stays_ECGonly_ROCPRC.npz - Corresponding ROC and PRC data for multi_stays_ECGonly.pth
+
+multiple_ECG_stays_model.pth - Saved model weights for all features trained on subset ≥2 ECG cohort (AUROC 0.934 AUPRC 0.960)
