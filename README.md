@@ -1,5 +1,5 @@
 # Serial 12-Lead ECG–Based Deep-Learning Model for Real-Time Prediction of Hospital Admission in Emergency-Department Cardiac Presentations: Retrospective Cohort Study  
-Arda Altintepe
+**Arda Altintepe**
 
 The scripts and models for this project are provided here in three directories. Many scripts take in MIMIC-IV raw or derived CSVs which are open-source but cannot be shared on a public GitHub repository.  
 
