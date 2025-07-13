@@ -1,4 +1,3 @@
-
 import pandas as pd
 
 # ---------- paths ----------
@@ -82,7 +81,6 @@ long_df = long_df.sort_values(["stay_id", "source"])
 long_df['source'] = long_df['source'] + 1
 long_df.to_csv(out_csv, index=False)
 print(f"\n✓ Wrote {out_csv}")
-
 import pandas as pd
 df = pd.read_csv("vitals_long.csv")
 # assume df is your DataFrame
