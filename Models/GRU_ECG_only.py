@@ -484,7 +484,7 @@ def main(arch_list):
 
 if __name__ == "__main__":
     if len(sys.argv)==1:
-        arches = ["gru","transformer","tcn"]
+        arches = ["gru"]
     else:
         arches = [a.lower() for a in sys.argv[1:]]
     for a in arches:
