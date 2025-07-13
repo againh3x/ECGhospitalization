@@ -1,7 +1,7 @@
 import pandas as pd
 
 # ---------- paths ----------
-ecg_csv     = "sequential_ecgs.csv"
+ecg_csv     = "final_ecgs.csv"
 triage_csv  = "triage.csv.gz"
 vitals_csv  = "vitalsign.csv.gz"
 out_csv     = "vitals_long.csv"
