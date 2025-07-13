@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-The script trains two data regimes
+The script trains two data regimes only using ECG waveform + time-delta channel data
     • ALL stays     (≥1 ECG)  –   name="All stays"
     • MULTI stays   (≥2 ECGs) –   name="MULTI stays"
 …then plots AUROC and AUPRC curves comparing the two regimes.
@@ -39,7 +39,7 @@ DEVICE           = "cuda" if torch.cuda.is_available() else "cpu"
 MAX_ECG_SEQ      = 6      # keep last N ECGs
 ECG_SEQ_LEN      = 5_000  # samples per lead
 ECG_EMB_DIM      = 512  # output of ResNet18+adapter
-SEQ_FEAT_DIM  = ECG_EMB_DIM + 1 
+SEQ_FEAT_DIM  = ECG_EMB_DIM + 1  (output of the resnet + 1 time-delta channel concatenated)
 HIDDEN           = 256    
 BATCH_SIZE       = 32
 EPOCHS           = 20
