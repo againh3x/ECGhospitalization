@@ -1,3 +1,6 @@
+'''This file creates the full pretraining_ecgs.csv based on the MIMIC-IV-ECG database that will later be used to train a ResNet. 
+The code creates the full cohort while merging and cleaning columns for pretraining.'''
+
 import pandas as pd
 from datetime import datetime, timedelta
 pd.set_option('display.max_rows', None) 
