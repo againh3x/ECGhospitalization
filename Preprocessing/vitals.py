@@ -1,3 +1,6 @@
+'''Loads ECG, triage, and periodic-vitals tables → keeps only stays present in the ECG file, drops any vitals recorded after the last ECG per stay.
+Stacks triage and periodic vitals into a single long-format file, cleans/normalises the pain column, de-duplicates triage rows that are identical to the first periodic entry, and saves the cleaned chronology as vitals_long_cleaned.csv.
+'''
 import pandas as pd
 
 # ---------- paths ----------
