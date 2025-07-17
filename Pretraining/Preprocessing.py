@@ -415,12 +415,7 @@ print("Remaining columns:", len(df.columns))
 
 
 display(df.head(10))
-tabdf = pd.read_csv('tabular_df_with_ecg_paths')
 
-
-pd.set_option('display.max_columns', None)
-print(tabdf.columns)
-print(list(tabdf.columns))
 cols_to_keep = ['bandwidth', 'early repolarization', 'rr_interval', 'SVR', 'or aberrant ventricular conduction', 'p_end', 'qrs_onset', 'qrs_end', 't_end', 'p_axis', 'qrs_axis', 't_axis', 'ecg_los', 'a-v dissociation', 'dextrocardia', 'junctional tachycardia', 'predominant 3:1 av block', 'regular supraventricular rhythm', 'aberrant complex', 'aberrant conduction of sv complex(es)', 'abnormal r-wave progression, early transition', 'poor r wave progression - probable normal variant', 'possible right atrial abnormality', 'prolonged qt interval', 'st elev, probable normal early repol pattern', 'short pr interval', 'sinus pause', 'supraventricular bigeminy', 'ventricular bigeminy', 'ventricular tachycardia, unsustained', 'ventricular trigeminy', "rsr'(v1) - probable normal variant", 'abnormal ecg', 'borderline ecg', 'normal ecg', 'normal ecg except for rate', 'temperature', 'heartrate', 'o2sat', 'sbp', 'dbp', 'acuity', 'age', 'gender_F', 'gender_M', 'race_AMERICAN INDIAN/ALASKA NATIVE', 'race_NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER', 'race_PORTUGUESE', 'race_SOUTH AMERICAN', 'arrival_transport_AMBULANCE', 'arrival_transport_HELICOPTER', 'arrival_transport_WALK IN', 'path', 'Chest Pain', 'Dyspnea', 'Presyncope', 'Syncope', '3_degree_a-v', '2_degree_a-v', '1_degree_a-v', 'aberrantly conducted supraventricular complexes', 'pvc(s)', 'pac(s)', 'paced', 'RVR', 'IVCD', 'LBBB', 'RBBB', 'LAFB', 'LPFB', 'Left axis dev', 'Right axis dev', 'long pr interval', 'idioventricular_rhythm', 'junctional_rhythm', 'UVR', 'sinus_arrh', 'LA enlargement', 'RA enlargement', 'low voltage precordial', 'low voltage limb', 'SV Tachycardia', 'WHITE', 'ASIAN', 'BLACK', 'HISPANIC', 'ventricular hypertrophy', 'depression', 'pericarditis', 'st elevation', 'infarct, old', 'infarct, acute', 'infarct - age undetermined', 'infarct, recent', 'ischemia', 'atrial fib', 'atrial flut', 'ectopic atrial r', 'ectopic atrial b', 'ectopic atrial t', 'sinus br', 'sinus rhy', 'sinus tac', 'lvh', 't wave changes', 'st changes', 'st-t changes', 't abnormalities', 'left atrial abnorm', 'repol abnormality', 'qrs_duration']
 
 
