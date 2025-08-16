@@ -22,7 +22,7 @@ LAB_GROUPS = {                       # label : [itemid, itemid, …]
     "bnp"  : [50963],                           # BNP / NT-proBNP
     "k"    : [50822, 50971],                    # Potassium
     "mg"   : [50960, 51088],                    # Magnesium
-    "wbc"  : [51300, 51516],                    # White-cell count
+    "wbc"  : [51300, 51301],                    # White-cell count
     "crp"  : [50889],                           # C-reactive protein
 }
 
