@@ -4,24 +4,10 @@
 ECG-only ED-disposition model:
   • MULTI stays (n_ecg >= 2)  and  All stays (all)
   • 5-fold CV only (NO held-out test set)
-  • EXACT same split policy as multimodal: StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+  • same split policy as multimodal: StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
   • Saves OOF predictions for DeLong, per-fold metrics, loss curves, and pooled ROC/PR
-
-Outputs (per variant):
-  ecg_only_performance/{multi_performance | all_performance}/
-    - {stem}_fold{k}_metrics.csv
-    - {stem}_fold{k}_loss.png
-    - {stem}_val_predictions.csv      (OOF preds: stay_id, true_label, pred_prob, fold)
-    - {stem}_cv_summary.csv           (mean±std across folds + pooled AUROC/AUPRC)
-    - {stem}_cv_roc.png               (pooled ROC)
-    - {stem}_cv_prc.png               (pooled PR)
-  ecg_only_performance/combined_performance/
-    - combined_roc_prc_data.npz
-    - combined_roc.png
-    - combined_prc.png
 """
 
-# ───────────────────────── Imports ──────────────────────────
 import os, random, warnings, sys
 from pathlib import Path
 
@@ -43,7 +29,6 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import StratifiedKFold
 
-# ─────────────────── Global hyper-parameters ───────────────────
 CSV_ECG   = "final_ecgs.csv"
 WAVE_DIR  = "..\\ecg"
 ENC_CKPT  = "pretrained_model.pth"
@@ -80,7 +65,6 @@ warnings.filterwarnings(
     module=r".*neurokit2\.ecg\.ecg_clean.*",
 )
 
-# ─────────────────────── Load CSVs / helpers ───────────────────────
 ecg_df = pd.read_csv(CSV_ECG, parse_dates=["ecg_time"])
 record_df = pd.read_csv("record_list.csv", parse_dates=["ecg_time"])
 PATH2TIME = dict(zip(record_df["path"], record_df["ecg_time"]))
@@ -93,7 +77,6 @@ def roc_prc_arrays(y_true: np.ndarray, y_prob: np.ndarray):
     ap   = average_precision_score(y_true, y_prob)
     return fpr, tpr, auc, prec, rec, ap
 
-# ─────────────────────── ECG loader ───────────────────────────
 def load_ecg(path: str) -> torch.Tensor:
     """Return a (12, ECG_SEQ_LEN) float32 tensor from a raw WFDB file."""
     rec = wfdb.rdrecord(path)
@@ -112,7 +95,6 @@ def load_ecg(path: str) -> torch.Tensor:
         cleaned = np.pad(cleaned, ((0, 0), (0, ECG_SEQ_LEN - cleaned.shape[1])))
     return torch.tensor(cleaned, dtype=torch.float32)
 
-# ─────────────────────── ECG encoder ──────────────────────────
 class BasicBlock1D(nn.Module):
     expansion = 1
     def __init__(self, in_planes, planes, stride=1):
@@ -174,7 +156,6 @@ class ECGEncoder(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.adapter(self.backbone(x))
 
-# ─────────────────────── Dataset ─────────────────────────────
 class StayECG(Dataset):
     """Returns ECG sequences, delta-time channels, and labels for a list of stays."""
     def __init__(self, stay_ids):
@@ -210,7 +191,6 @@ def collate(batch):
     dt   = pad_sequence(dt,  batch_first=True)  # (B, T)
     return ecg, dt, lens, y
 
-# ─────────────────── Model definitions ───────────────────────
 class GRUHead(nn.Module):
     def __init__(self):
         super().__init__()
@@ -227,7 +207,6 @@ class GRUHead(nn.Module):
 
 HEADS = {"gru": GRUHead}
 
-# ─────────────── Train / eval helpers ────────────────────────
 def epoch_pass(head: nn.Module, loader: DataLoader, criterion, opt=None, desc="train", encoder=None):
     train = opt is not None
     head.train()     if train else head.eval()
@@ -262,7 +241,6 @@ def epoch_pass(head: nn.Module, loader: DataLoader, criterion, opt=None, desc="t
     yp = torch.cat(yp).numpy()
     return np.mean(losses), roc_auc_score(yt, yp), average_precision_score(yt, yp), yt, yp
 
-# ──────────────── main CV per regime ────────────────
 def train_variant(head_cls, name: str, keep_multi: bool, perf_dir: Path):
     """
     Run 5-fold CV with EXACT same fold generator as multimodal script.
@@ -383,7 +361,7 @@ def train_variant(head_cls, name: str, keep_multi: bool, perf_dir: Path):
     })
     summary.to_csv(perf_dir / f"{stem}_cv_summary.csv", index=False)
 
-    # Save pooled curves + figures
+
     np.savez(perf_dir / f"{stem}_cv_roc_prc_data.npz", fpr=fpr, tpr=tpr, auc=auc, prec=prec, rec=rec, pr=ap)
 
     plt.figure()
@@ -401,7 +379,6 @@ def train_variant(head_cls, name: str, keep_multi: bool, perf_dir: Path):
 
     return {"name": name, "fpr": fpr, "tpr": tpr, "auc": auc, "prec": prec, "rec": rec, "ap": ap}
 
-# ───────────────────────── main ─────────────────────────────
 def main(arch="gru"):
     assert arch in HEADS, f"Unknown architecture '{arch}'. Choose from {list(HEADS)}"
     head_cls = HEADS[arch]
@@ -443,3 +420,4 @@ if __name__ == "__main__":
     random.seed(SEED_SPLITS); np.random.seed(SEED_SPLITS); torch.manual_seed(SEED_SPLITS)
     arch = "gru" if len(sys.argv) == 1 else sys.argv[1].lower()
     main(arch)
+
