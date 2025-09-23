@@ -2,29 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 Train ED-disposition predictor from sequential ECGs + sequential vitals + static variables
-
-Now uses 5-fold cross-validation on the FULL dataset (no held-out test set)
+Uses 5-fold cross-validation on the full dataset
 for both:
   • "MULTI stays" (n_ecg >= 2)
   • "All stays"   (all stays)
-
-Outputs (per variant):
-  perf_dir/
-    - {stem}_fold{k}_metrics.csv      (per-epoch train/val loss & AUC, best marked)
-    - {stem}_fold{k}_loss.png         (loss curves)
-    - {stem}_val_predictions.csv      (all out-of-fold predictions; stay_id, y, p, fold)
-    - {stem}_cv_summary.csv           (mean±std across folds + pooled metrics)
-    - {stem}_cv_roc.png               (pooled ROC curve with pooled AUROC)
-    - {stem}_cv_prc.png               (pooled PR curve with pooled AUPRC)
-
-combined_performance/
-    - combined_roc_prc_data.npz       (pooled curves for MULTI vs All)
-    - combined_roc.png                (pooled ROC curves for both)
-    - combined_prc.png                (pooled PR curves for both)
 """
-# ────────────────────────────────────────────────────────────────────────────
-# Imports
-# ────────────────────────────────────────────────────────────────────────────
+
 import os, random, warnings, re, json, pickle, pathlib
 import numpy as np
 import pandas as pd
@@ -48,9 +31,6 @@ import wfdb, neurokit2 as nk
 pd.DataFrame.pad = pd.DataFrame.ffill
 pd.Series.pad    = pd.Series.ffill
 
-# ────────────────────────────────────────────────────────────────────────────
-# Helpers
-# ────────────────────────────────────────────────────────────────────────────
 def roc_prc_arrays(y_true: np.ndarray, y_prob: np.ndarray):
     """Return (fpr, tpr, auc, precision, recall, auprc)."""
     fpr, tpr, _ = roc_curve(y_true, y_prob)
@@ -59,9 +39,6 @@ def roc_prc_arrays(y_true: np.ndarray, y_prob: np.ndarray):
     pr_auc = average_precision_score(y_true, y_prob)
     return fpr, tpr, roc_auc, prec, rec, pr_auc
 
-# ────────────────────────────────────────────────────────────────────────────
-# Global settings / hyper-parameters
-# ────────────────────────────────────────────────────────────────────────────
 CSV_ECG          = "final_ecgs.csv"
 CSV_VITALS_LONG  = "vitals_long_cleaned.csv"
 WAVE_DIR         = "..\\ecg"
@@ -178,9 +155,8 @@ warnings.filterwarnings(
     module=r".*neurokit2\.ecg\.ecg_clean.*"
 )
 
-# ────────────────────────────────────────────────────────────────────────────
+
 # ECG loader  →  (12, ECG_SEQ_LEN) float32
-# ────────────────────────────────────────────────────────────────────────────
 def load_ecg(path: str) -> torch.Tensor:
     rec = wfdb.rdrecord(path)
     sig = rec.p_signal.astype(float)    # (N, 12)
@@ -198,9 +174,8 @@ def load_ecg(path: str) -> torch.Tensor:
         cleaned = np.pad(cleaned, ((0, 0), (0, ECG_SEQ_LEN - cleaned.shape[1])))
     return torch.tensor(cleaned, dtype=torch.float32)
 
-# ────────────────────────────────────────────────────────────────────────────
+
 # 1-D ResNet-18 backbone / ECG encoder
-# ────────────────────────────────────────────────────────────────────────────
 class BasicBlock1D(nn.Module):
     expansion = 1
     def __init__(self, in_planes, planes, stride=1):
@@ -264,9 +239,7 @@ class ECGEncoder(nn.Module):
     def forward(self, x):
         return self.adapter(self.backbone(x))
 
-# ────────────────────────────────────────────────────────────────────────────
-# Load CSVs
-# ────────────────────────────────────────────────────────────────────────────
+
 ecg_df = pd.read_csv(CSV_ECG, parse_dates=["ecg_time", 'intime'])
 ecg_df["missing_acuity"] = ecg_df["acuity"].isna().astype(float)
 BOOL_SCALARS.append("missing_acuity")
@@ -278,9 +251,6 @@ vital_df = pd.read_csv(CSV_VITALS_LONG)
 for col in numeric_vital_cols:
     vital_df[f"real_{col}"] = vital_df[col].notna().astype(float)
 
-# ────────────────────────────────────────────────────────────────────────────
-#  Dataset
-# ────────────────────────────────────────────────────────────────────────────
 class StaySeqDS(Dataset):
     """
     One item →
@@ -381,7 +351,7 @@ class StaySeqDS(Dataset):
         label     = torch.tensor(label_val, dtype=torch.float32)
         return ecg_seq, dt_seq, vit_seq, scalars, label
 
-# ────────────────────────────────────────────────────────────────────────────
+
 def collate(batch):
     batch = [b for b in batch if b]
     if not batch:
@@ -399,9 +369,6 @@ def collate(batch):
         torch.stack(y).to(DEVICE),
     )
 
-# ────────────────────────────────────────────────────────────────────────────
-# Model
-# ────────────────────────────────────────────────────────────────────────────
 class LoSNet(nn.Module):
     def __init__(self, scal_dim):
         super().__init__()
@@ -423,9 +390,7 @@ class LoSNet(nn.Module):
         x     = torch.cat([h_ecg, h_vit, s], 1)
         return self.head(self.drop(x)).squeeze(1)
 
-# ────────────────────────────────────────────────────────────────────────────
-# Train / eval helpers
-# ────────────────────────────────────────────────────────────────────────────
+
 def epoch_pass(net, loader, criterion, opt=None, desc="train", encoder=None):
     train = opt is not None
     net.train()      if train else net.eval()
@@ -462,9 +427,6 @@ def epoch_pass(net, loader, criterion, opt=None, desc="train", encoder=None):
     yp = torch.cat(yp).numpy()
     return np.mean(losses), roc_auc_score(yt, yp), average_precision_score(yt, yp), yt, yp
 
-# ────────────────────────────────────────────────────────────────────────────
-# Main CV loop (no held-out test)
-# ────────────────────────────────────────────────────────────────────────────
 def train_variant(name="MULTI stays", keep_multi=True):
     stays = ecg_df.loc[ecg_df["n_ecg"].ge(2) if keep_multi else slice(None), "stay_id"].tolist()
     perf_dir = Path("multi_performance" if keep_multi else "all_performance")
@@ -618,7 +580,6 @@ def train_variant(name="MULTI stays", keep_multi=True):
         "prec": prec, "rec": rec, "pr_auc": pr_auc     # pooled
     }
 
-# ────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     random.seed(0); np.random.seed(0); torch.manual_seed(0)
 
@@ -635,7 +596,6 @@ if __name__ == "__main__":
         multi_prec=multi["prec"], multi_rec=multi["rec"], multi_pr=multi["pr_auc"],
         all_prec=single["prec"],  all_rec=single["rec"],  all_pr=single["pr_auc"])
 
-    # ── combined AUROC figure (pooled) ───────────────────────────
     plt.figure()
     plt.plot(multi["fpr"],  multi["tpr"],
              label=f"MULTI stays (AUROC {multi['roc_auc']:.3f})")
@@ -655,3 +615,4 @@ if __name__ == "__main__":
     plt.xlabel("Recall"); plt.ylabel("Precision")
     plt.title("CV PR curves – MULTI vs All (pooled)"); plt.legend()
     plt.tight_layout(); plt.savefig(combined_dir / "combined_prc.png", dpi=200); plt.close()
+
