@@ -27,28 +27,49 @@ The scripts and models for this project are provided here in three directories. 
 
 ## Models
 
-- `All_features_ROCPRC_data.npz` - combined ROC and PRC data stored for models trained on all features (used to generate graphs)  
+Three modelling approaches are provided in the `Models/` directory. All are trained using **stratified 5-fold cross-validation** on two cohorts:  
 
-**GRU_ECG_only.py – End-to-end trainer for the ECG-only admission model.**  
-• Inputs: `final_ecgs.csv`, raw waveform files in `..\ecg\`, and the pretrained ResNet weights `pretrained_model.pth`.    
-  – Encodes up to six 12-lead ECGs per stay with the unfrozen ResNet-18 + linear adapter.  
-  – Appends a time-delta channel, feeds the sequence to a single-layer GRU head, and optimizes BCE with class weighting.  
-  – Trains two regimes (“All stays” ≥1 ECG; “MULTI stays” ≥2 ECGs), applies early stopping, and logs loss curves, AUROC/AUPRC, confusion matrices, and per-epoch metrics.  
-• Outputs (in `outputs/gru/…`): best-epoch model checkpoints (`*_best.pth`), `*_roc_prc.npz` for plotting, loss-curve PNGs, and CSVs with epoch-level metrics & confusion matrices.  
+- **All stays** (≥1 ECG)  
+- **Multi-ECG subset** (≥2 ECGs per encounter)
 
-**GRU_all_features.py – Trainer for the multimodal model that fuses ECGs, vitals, and scalar features.**  
-• Inputs: `final_ecgs.csv`, `vitals_long_cleaned.csv`, waveform files, and `pretrained_model.pth`.  
-  – Generates ECG embeddings exactly as above, **plus** embeds up to ten rows of sequential vitals and 353 z-scored / boolean scalar features.  
-  – Summarizes ECG and vital sequences with separate GRUs, concatenates both hidden states with the scalar vector, and passes through a dropout-FC head.  
-  – Trains “All stays” and “MULTI stays” variants, handles imputation and z-scaling, performs class-weighted BCE training with early stopping, and records full performance diagnostics.  
-• Outputs (in `all_performance/`, `multi_performance/`, and `combined_performance/`): best-epoch `*_best_model.pth`, `*_roc_prc_data.npz`, loss and ROC/PRC figures, epoch-metric CSVs, and confusion-matrix summaries.  
+---
 
-- `all_stays_ECGonly.pth` - Saved model weights for ECG-only features trained on full cohort (AUROC 0.845 AUPRC 0.863)  
-- `all_stays_ECGonly_ROCPRC.npz` - Corresponding ROC and PRC data for `all_stays_ECGonly.pth`  
+### 1. ECG-only GRU  
+`Models/ECG only/GRU_ecg.py`  
 
-- `all_stays_model.pth` - Saved model weights for all features trained on full cohort (AUROC 0.913 AUPRC 0.932)  
+- End-to-end trainer that encodes up to six 12-lead waveforms per stay with an **unfrozen ResNet-18 encoder + linear adapter**, appends time-delta information, and processes the sequence with a **GRU**.  
+- **Performance:** AUROC ≈ **0.852** (all stays), **0.859** (≥2-ECG subset).  
+- **Outputs:** per-fold metrics, pooled ROC curves, CSV summaries in:  
+  - `Models/ECG only/Metrics - All Stays`  
+  - `Models/ECG only/Metrics - Multi-ECG Stays`
 
-- `multi_stays_ECGonly.pth` - Saved model weights for ECG-only features trained on subset ≥2 ECG cohort (AUROC 0.878 AUPRC 0.918)  
-- `all_stays_ECGonly_ROCPRC.npz` - Corresponding ROC and PRC data for `multi_stays_ECGonly.pth`  
+---
 
-- `multiple_ECG_stays_model.pth` - Saved model weights for all features trained on subset ≥2 ECG cohort (AUROC 0.934 AUPRC 0.960)  
+### 2. Tabular baseline  
+`Models/Tabular/train.py`  
+
+- Random-forest classifier trained on **demographic, triage, medication, past medical history, and labs** available up to prediction time.  
+- **Performance:** AUROC ≈ **0.886** (all stays), **0.911** (≥2-ECG subset).  
+- **Outputs:** per-fold metrics, cross-validation summaries in:  
+  - `Models/Tabular/Metrics - All Stays`  
+  - `Models/Tabular/Metrics - Multi-ECG Stays`
+
+---
+
+### 3. Multimodal fusion  
+`Models/Multimodal/train.py`  
+
+- Fuses **ECG embeddings, sequential vital signs, and static features** from the tabular model.  
+- ECG and vital sequences are separately summarised with **recurrent networks**, concatenated with static features, then passed through a **dropout-FC head**.  
+- **Performance:** AUROC ≈ **0.911** (all stays), **0.924** (≥2-ECG subset).  
+- **Outputs:** per-fold metrics, loss and ROC figures, pooled ROC/PR curves, and summaries in:  
+  - `Models/Multimodal/Metrics - All Stays`  
+  - `Models/Multimodal/Metrics - Multi-ECG Stays`
+
+---
+
+### Cross-validation summaries
+
+- Files named `*_cv_summary.csv` report **mean ± std AUROC across folds** and the **pooled AUROC**.  
+- Out-of-fold predictions (`*_val_predictions.csv`) are provided for each fold to support **plotting and statistical comparisons**.  
+- All scripts reuse the **same stratified splits** to enable fair model comparison.
