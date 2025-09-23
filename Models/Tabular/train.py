@@ -20,7 +20,6 @@ from sklearn.metrics import (
     confusion_matrix, precision_recall_fscore_support, accuracy_score
 )
 
-# RandomForest + joblib (for saving/loading)
 from sklearn.ensemble import RandomForestClassifier
 from joblib import dump
 
@@ -33,9 +32,6 @@ except Exception:
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# ────────────────────────────────────────────────────────────────────────────
-# Files / columns
-# ────────────────────────────────────────────────────────────────────────────
 CSV_ECG = "final_ecgs.csv"
 
 NUM_SCALARS = [
@@ -118,9 +114,6 @@ RANDOM_STATE = 0
 np.random.seed(RANDOM_STATE)
 random.seed(RANDOM_STATE)
 
-# ────────────────────────────────────────────────────────────────────────────
-# Utilities
-# ────────────────────────────────────────────────────────────────────────────
 
 def roc_prc_arrays(y_true: np.ndarray, y_prob: np.ndarray):
     fpr, tpr, _ = roc_curve(y_true, y_prob)
@@ -165,9 +158,6 @@ def save_curves(metrics: dict, outpath_png_roc: Path, outpath_png_prc: Path):
     plt.title("Precision–Recall curve (pooled)"); plt.legend(); plt.tight_layout()
     plt.savefig(outpath_png_prc, dpi=200); plt.close()
 
-# ────────────────────────────────────────────────────────────────────────────
-# Data loading / features
-# ────────────────────────────────────────────────────────────────────────────
 
 def load_ecg_df(path: str) -> pd.DataFrame:
     df = pd.read_csv(path, parse_dates=["ecg_time", "intime"])
@@ -190,9 +180,6 @@ def select_feature_columns(df: pd.DataFrame):
     use_bool = [c for c in feat_bool if c in df.columns]
     return use_num + use_bool
 
-# ────────────────────────────────────────────────────────────────────────────
-# RandomForest helper (defaults only)
-# ────────────────────────────────────────────────────────────────────────────
 
 def make_rf() -> RandomForestClassifier:
     return RandomForestClassifier(
@@ -201,10 +188,7 @@ def make_rf() -> RandomForestClassifier:
         # NOTE: RF does not natively support NaN values.
     )
 
-# ────────────────────────────────────────────────────────────────────────────
-# Core: reproduce EXACT 5-fold splits from multimodal and train RF
-# ────────────────────────────────────────────────────────────────────────────
-
+# reproduce EXACT 5-fold splits from multimodal and train RF
 def train_rf_variant(ecg_df: pd.DataFrame, keep_multi: bool, name: str):
     """
     Reproduce multimodal 5-fold StratifiedKFold and train RF baseline on tabular features only.
@@ -216,7 +200,7 @@ def train_rf_variant(ecg_df: pd.DataFrame, keep_multi: bool, name: str):
 
     y_all = ecg_df.set_index("stay_id").loc[stays, "disposition_HOME"].to_numpy().astype(int)
 
-    # SAME 5-fold CV as multimodal on the FULL set
+ 
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
     folds = list(skf.split(stays, y_all))
 
@@ -224,7 +208,6 @@ def train_rf_variant(ecg_df: pd.DataFrame, keep_multi: bool, name: str):
     X_table = ecg_df.set_index("stay_id")[feat_cols].copy().astype(float)
     y_table = ecg_df.set_index("stay_id")["disposition_HOME"].astype(int)
 
-    # Fail fast if any NaNs remain (RF can't handle them)
     if np.isnan(X_table.values).any():
         n_nan = np.isnan(X_table.values).sum()
         raise ValueError(f"RF baseline: feature matrix contains {n_nan} NaNs. "
@@ -240,7 +223,7 @@ def train_rf_variant(ecg_df: pd.DataFrame, keep_multi: bool, name: str):
     fold_ap_list  = []
     stem = name.lower().replace(" ", "_")
 
-    # NEW: feature importance collector
+  
     fold_importances = []  # list of np.array, one per fold  # NEW: feature importance
 
     for fold_idx, (tri, vai) in enumerate(folds):
@@ -339,9 +322,6 @@ def train_rf_variant(ecg_df: pd.DataFrame, keep_multi: bool, name: str):
         "prec": prec, "rec": rec, "pr_auc": pr_auc     # pooled
     }
 
-# ────────────────────────────────────────────────────────────────────────────
-# Main
-# ────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     print("RandomForest baseline (tabular-only) — EXACT multimodal CV splits (no test set)")
