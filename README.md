@@ -1,7 +1,7 @@
 <div align="center">
 <h1>Serial 12-Lead ECG–Based Deep-Learning Model for Hospital Admission Prediction in Emergency Department Cardiac Presentations</h1>
 <p>
-  <a href="https://doi.org/10.2196/80569"><img src="https://img.shields.io/badge/Journal-JMIR_Cardio_2025-orange?style=flat-square" alt="JMIR Cardio 2025"></a>
+  <a href="https://doi.org/10.2196/80569"><img src="https://img.shields.io/badge/Journal-JMIR_Cardio_2025-orange?style=flat-square" alt="JMIR Cardio"></a>
   <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12533930/"><img src="https://img.shields.io/badge/PubMed-PMC12533930-green?style=flat-square" alt="PMC"></a>
 </p>
 <p>
