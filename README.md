@@ -12,7 +12,7 @@
   <sup>1</sup> Horace Mann School, New York, NY, USA<br>
   <sup>2</sup> Department of Radiology and Imaging Sciences, Emory University School of Medicine, Atlanta, GA, USA
 </p>
-<p><em>JMIR Cardio</em></p>
+<p><em>JMIR Cardio</em>, 2025</p>
 </div>
 
 ---
